@@ -1,11 +1,10 @@
-from tensorflow.keras.models import load_model # type: ignore
-from processData import modelFiles, getScaler
-from processData import *
-import mlflow
+from tensorflow.keras.models import load_model as keras_load_model  # type: ignore
+from processData import model_files, get_scaler
+import numpy as np
 import os
 
-# Modelo de dado para predição.
-xData = [
+# Modelo de dado para predição (exemplo)
+x_data = [
     23.3007,
     23.3082,
     23.1652,
@@ -70,27 +69,39 @@ xData = [
 
 model = None
 
-def laodModel():
+
+def load_model():
+    """Carrega o modelo treinado do disco."""
     global model
-    
-    model = load_model(os.path.join(modelFiles, "my_model.keras"))
+    model = keras_load_model(os.path.join(model_files, "my_model.keras"))
     model.summary()
-        
-        
-def modelPredict(xData:list) -> int:
+
+
+def model_predict(x_data: list) -> float:
+    """
+    Realiza predição com o modelo LSTM.
+
+    Args:
+        x_data: Lista com 60 preços de fechamento.
+
+    Returns:
+        Preço previsto para o próximo dia.
+    """
     global model
-    
 
-    if len(xData) == 60:
-        
-        if model is None:
-            laodModel()
-            
-        xData = np.array(xData).reshape(-1, 1)
-        xDataScaled = getScaler().transform(xData)
-        xData = np.array(xDataScaled).reshape(1, 60, 1)
+    if len(x_data) != 60:
+        raise ValueError("É necessário fornecer exatamente 60 valores para predição.")
 
-        prediction = model.predict(xData)
-        prediction = getScaler().inverse_transform(prediction)[0][0]
+    if model is None:
+        load_model()
 
-        return int(round(prediction, 2))
+    # Preparar dados para predição
+    x_array = np.array(x_data).reshape(-1, 1)
+    x_scaled = get_scaler().transform(x_array)
+    x_reshaped = np.array(x_scaled).reshape(1, 60, 1)
+
+    # Realizar predição
+    prediction = model.predict(x_reshaped)
+    prediction_value = get_scaler().inverse_transform(prediction)[0][0]
+
+    return round(float(prediction_value), 2)
